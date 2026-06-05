@@ -7,7 +7,6 @@ import { PostFX } from "../engine/PostFX";
 import { FirstPersonController } from "../player/FirstPersonController";
 import { ResonanceLens } from "../lens/ResonanceLens";
 import { WorldState, WorldStateManager } from "../spectral/WorldState";
-import { DeepResonance } from "../spectral/DeepResonance";
 import { SpectralCore } from "../spectral/SpectralCore";
 import { MobileHUD, ToolMode } from "../ui/MobileHUD";
 import { Soundscape } from "../audio/Soundscape";
@@ -29,7 +28,6 @@ export class Game {
   private controller: FirstPersonController;
   private lens: ResonanceLens;
   private world = new WorldStateManager();
-  private deep: DeepResonance;
   private core: SpectralCore;
   private hud: MobileHUD;
   private sound = new Soundscape();
@@ -81,9 +79,6 @@ export class Game {
 
     this.lens = new ResonanceLens();
     this.lens.attachTo(this.cameraRig.camera);
-
-    this.deep = new DeepResonance(new THREE.Vector3(this.core.spawn.x, 0, this.core.spawn.z));
-    this.renderer.scene.add(this.deep.group);
 
     this.postfx = new PostFX(this.renderer.gl, this.renderer.scene, this.cameraRig.camera);
 
@@ -213,8 +208,6 @@ export class Game {
 
     this.controller.update(dt);
     this.world.update(dt);
-    this.deep.setVisibility(this.world.dissolve);
-    this.deep.update(t);
 
     this.updateFocus();
     this.core.update(dt, t);
