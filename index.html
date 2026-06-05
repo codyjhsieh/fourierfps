@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#e9e2d6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>The House That Remembers</title>
+    <style>
+      :root {
+        --ink: #5f5a55;
+        --paper: #efe8dc;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--paper);
+        font-family: "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+        color: var(--ink);
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      /* Boot overlay */
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.2rem;
+        background: var(--paper);
+        z-index: 100;
+        transition: opacity 0.8s ease;
+      }
+      #boot h1 {
+        font-weight: 300;
+        letter-spacing: 0.35em;
+        font-size: clamp(1rem, 4vw, 1.6rem);
+        margin: 0;
+        text-transform: uppercase;
+        opacity: 0.85;
+      }
+      #boot p {
+        font-weight: 300;
+        letter-spacing: 0.1em;
+        opacity: 0.55;
+        font-size: 0.85rem;
+        margin: 0;
+      }
+      #boot button {
+        margin-top: 0.5rem;
+        padding: 0.7rem 2.2rem;
+        border: 1px solid rgba(95, 90, 85, 0.45);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background 0.25s ease, transform 0.15s ease;
+      }
+      #boot button:active {
+        transform: scale(0.97);
+        background: rgba(95, 90, 85, 0.08);
+      }
+      #boot.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="boot">
+      <h1>The House That Remembers</h1>
+      <p>A pastel memory with a hidden mathematical structure.</p>
+      <button id="boot-start">Enter</button>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
