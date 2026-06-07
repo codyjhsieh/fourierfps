@@ -250,7 +250,7 @@ export class Game {
       case "establishing":
         return 0.05;
       case "reality":
-        return 0.8;
+        return 0.55;
       case "spectral":
         return 0.12;
       case "eliminating":

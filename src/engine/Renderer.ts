@@ -39,16 +39,21 @@ export class Renderer {
   }
 
   private addLights(): void {
-    const hemi = new THREE.HemisphereLight(0xfff6ec, Palette.shadow, 1.05);
+    // bright hemispheric ambient so interiors aren't murky
+    const hemi = new THREE.HemisphereLight(0xfff6ec, 0xd6ccbe, 1.55);
     this.scene.add(hemi);
 
-    const sun = new THREE.DirectionalLight(0xfff3e2, 1.25);
+    const sun = new THREE.DirectionalLight(0xfff3e2, 1.15);
     sun.position.set(6, 9, 4);
     this.scene.add(sun);
 
-    const fill = new THREE.DirectionalLight(Palette.powderBlue, 0.35);
+    const fill = new THREE.DirectionalLight(Palette.powderBlue, 0.5);
     fill.position.set(-5, 3, -6);
     this.scene.add(fill);
+    // low fill from the opposite side lifts shadowed interior surfaces
+    const fill2 = new THREE.DirectionalLight(0xffe8d8, 0.45);
+    fill2.position.set(2, 1, 7);
+    this.scene.add(fill2);
   }
 
   render(camera: THREE.Camera): void {

@@ -39,7 +39,7 @@ const PALETTES: Record<string, ArchPalette> = {
     bg: { reality: 0xddc8c0, spectral: 0xe9eef2, restored: 0xf6f1e8, establishing: 0xf6f1e8 }
   },
   "OFFICE TOWER": {
-    reality: { a: 0x9aa3ad, b: 0x6f7780, sky: 0xc7ccd2, ground: 0x55595f, rim: 0x7fd0e6 },
+    reality: { a: 0xb2bac2, b: 0x90979f, sky: 0xd2d7dc, ground: 0x7c828a, rim: 0x7fd0e6 },
     spectral: { a: 0x8ec5e6, b: 0xbfe0ef, sky: 0xdfeefa, ground: 0x8aa0b0, rim: 0x9fe0ff },
     restored: { a: 0xcfe0ea, b: 0xa9c2d4, sky: 0xeef4fa, ground: 0x9bb0c0, rim: 0xbfeeff },
     bg: { reality: 0xb4bcc4, spectral: 0xdfeefa, restored: 0xeef4fa, establishing: 0xeef4fa }
@@ -496,7 +496,7 @@ export class SpectralCore {
           vec3 amb = mix(uGround, uSky, vWN.y*0.5+0.5);
           vec3 base = mix(uColorA, uColorB, vWY);
           float fres = pow(1.0 - max(0.0, dot(N, V)), 3.0);
-          vec3 c = base*(0.35+0.55*diff) + amb*0.22 + uRim*fres*0.55 + vec3(spec);
+          vec3 c = base*(0.55+0.5*diff) + amb*0.45 + uRim*fres*0.6 + vec3(spec);
           gl_FragColor = vec4(c, 0.95);
         }`
     });

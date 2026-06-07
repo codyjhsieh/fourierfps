@@ -132,7 +132,7 @@ export const generateApartmentPlan: PlanFn = (level, seed, n): ScenePlan => {
   const objects: PlacedObject[] = [];
   const occ = new Occupancy(0.4);
   // 60..150 props scaling with room count
-  const budget = Math.min(150, 60 + spec.rooms.length * 12);
+  const budget = Math.min(460, 180 + spec.rooms.length * 32);
 
   spec.rooms.forEach((room, ri) => {
     const kit = APT_ROOM_KITS[ri % APT_ROOM_KITS.length];
@@ -267,7 +267,7 @@ export const generateOfficePlan: PlanFn = (level, seed, n): ScenePlan => {
   const halfX = ext[0] / 2 - 1.0;
   const halfZ = ext[2] / 2 - 1.0;
   // 200..600 desks/chairs/plants scaling with floors and depth
-  const budget = Math.min(600, 200 + floors * 60 + level * 20);
+  const budget = Math.min(1000, 340 + floors * 95 + level * 30);
   const occ = new Occupancy(0.5);
 
   for (let fl = 0; fl < floors && objects.length < budget; fl++) {
