@@ -207,7 +207,10 @@ export class RealityScene {
         new THREE.Vector3(0, 1, 0),
         o.rot
       );
-      const color = palette.colorFor(o.colorKey);
+      // per-instance tint jitter so rows of identical props don't read flat
+      const color = palette.colorFor(o.colorKey).clone();
+      const j = (Math.sin((this.instances.length + 1) * 12.9898) * 43758.5453) % 1;
+      color.offsetHSL(j * 0.05 - 0.025, j * 0.14 - 0.07, j * 0.16 - 0.08);
 
       const inst: Inst = {
         pos,
