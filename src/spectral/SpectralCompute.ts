@@ -32,6 +32,44 @@ export function bandCountForLevel(level: number): number {
 export interface MeshArrays {
   positions: Float32Array;
   indices: Uint32Array;
+  normals: Float32Array;
+}
+
+/** Compute smooth vertex normals in the worker so the main thread just uploads. */
+function withNormals(m: { positions: Float32Array; indices: Uint32Array }): MeshArrays {
+  const p = m.positions;
+  const idx = m.indices;
+  const normals = new Float32Array(p.length);
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = idx[i] * 3;
+    const b = idx[i + 1] * 3;
+    const c = idx[i + 2] * 3;
+    const e1x = p[b] - p[a];
+    const e1y = p[b + 1] - p[a + 1];
+    const e1z = p[b + 2] - p[a + 2];
+    const e2x = p[c] - p[a];
+    const e2y = p[c + 1] - p[a + 1];
+    const e2z = p[c + 2] - p[a + 2];
+    const nx = e1y * e2z - e1z * e2y;
+    const ny = e1z * e2x - e1x * e2z;
+    const nz = e1x * e2y - e1y * e2x;
+    normals[a] += nx;
+    normals[a + 1] += ny;
+    normals[a + 2] += nz;
+    normals[b] += nx;
+    normals[b + 1] += ny;
+    normals[b + 2] += nz;
+    normals[c] += nx;
+    normals[c + 1] += ny;
+    normals[c + 2] += nz;
+  }
+  for (let i = 0; i < normals.length; i += 3) {
+    const l = Math.hypot(normals[i], normals[i + 1], normals[i + 2]) || 1;
+    normals[i] /= l;
+    normals[i + 1] /= l;
+    normals[i + 2] /= l;
+  }
+  return { positions: p, indices: idx, normals };
 }
 
 export interface SpectralResult {
@@ -117,13 +155,13 @@ export function computeSpectralWorld(level: number, seed: number, n = 64, K = 8)
     const cutoff = ((k + 1) / K) * 1.05;
     const recon = inverseLowPass(spectrum, n, cutoff);
     const iso = Math.max(0.04, 0.45 * maxOf(recon));
-    bands.push(surfaceNets(recon, n, iso, 1, [0, 0, 0]));
+    bands.push(withNormals(surfaceNets(recon, n, iso, 1, [0, 0, 0])));
   }
 
   const cleanSpectrum = toComplex(field.data);
   fft3d(cleanSpectrum, n, false);
   const cleanRecon = inverseLowPass(cleanSpectrum, n, 3);
-  const clean = surfaceNets(cleanRecon, n, Math.max(0.04, 0.45 * maxOf(cleanRecon)), 1, [0, 0, 0]);
+  const clean = withNormals(surfaceNets(cleanRecon, n, Math.max(0.04, 0.45 * maxOf(cleanRecon)), 1, [0, 0, 0]));
 
   const frac = 1 - Math.min(1, anomaly.radius / 0.8);
   const anomalyBand = Math.min(K - 1, Math.max(1, Math.round(frac * (K - 1))));
@@ -151,9 +189,9 @@ export function computeSpectralWorld(level: number, seed: number, n = 64, K = 8)
 export function resultTransferables(r: SpectralResult): ArrayBuffer[] {
   const t: ArrayBuffer[] = [];
   for (const b of r.bands) {
-    t.push(b.positions.buffer as ArrayBuffer, b.indices.buffer as ArrayBuffer);
+    t.push(b.positions.buffer as ArrayBuffer, b.indices.buffer as ArrayBuffer, b.normals.buffer as ArrayBuffer);
   }
-  t.push(r.clean.positions.buffer as ArrayBuffer, r.clean.indices.buffer as ArrayBuffer);
+  t.push(r.clean.positions.buffer as ArrayBuffer, r.clean.indices.buffer as ArrayBuffer, r.clean.normals.buffer as ArrayBuffer);
   t.push(r.solid.buffer as ArrayBuffer);
   return t;
 }

@@ -93,8 +93,8 @@ function detectMobile(): boolean {
 function geomFromArrays(m: MeshArrays): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(m.positions, 3));
+  g.setAttribute("normal", new THREE.BufferAttribute(m.normals, 3)); // computed in worker
   g.setIndex(new THREE.BufferAttribute(m.indices, 1));
-  g.computeVertexNormals();
   return g;
 }
 
