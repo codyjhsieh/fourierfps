@@ -77,15 +77,37 @@ export class FirstPersonController {
     this.velY = 0;
     if (yaw !== undefined) this.yaw = yaw;
     if (pitch !== undefined) this.pitch = pitch;
+    let px = x;
+    let pz = z;
     if (this.collider) {
       const s = this.collider.solid;
-      let feet = groundHeight(s, x, z, START_SCAN, this.collider.voxelY * 0.5, 0);
-      feet = unstick(s, x, feet, z, BODY_TOP, this.collider.voxelY * 0.5, 6);
-      this.feetY = Math.max(0, feet);
+      const step = this.collider.voxelY * 0.5;
+      const groundAt = (gx: number, gz: number): number =>
+        Math.max(0, unstick(s, gx, groundHeight(s, gx, gz, START_SCAN, step, 0), gz, BODY_TOP, step, 6));
+      let feet = groundAt(x, z);
+      // never spawn embedded: if the body column is blocked, spiral outward for
+      // the nearest open standing spot (covers furniture, hull walls, etc.)
+      if (bodyBlocked(s, x, z, feet, RADIUS, STEP_UP, BODY_TOP)) {
+        search: for (let r = 0.6; r <= 8; r += 0.6) {
+          for (let a = 0; a < 16; a++) {
+            const ang = (a / 16) * Math.PI * 2;
+            const nx = x + Math.cos(ang) * r;
+            const nz = z + Math.sin(ang) * r;
+            const nf = groundAt(nx, nz);
+            if (!bodyBlocked(s, nx, nz, nf, RADIUS, STEP_UP, BODY_TOP)) {
+              px = nx;
+              pz = nz;
+              feet = nf;
+              break search;
+            }
+          }
+        }
+      }
+      this.feetY = feet;
     } else {
       this.feetY = 0;
     }
-    this.pivot.position.set(x, this.feetY + EYE_OFFSET, z);
+    this.pivot.position.set(px, this.feetY + EYE_OFFSET, pz);
     this.pivot.rotation.set(0, this.yaw, 0);
     this.camera.rotation.set(this.pitch, 0, 0);
   }
