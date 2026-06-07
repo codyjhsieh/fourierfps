@@ -211,6 +211,7 @@ export class Game {
 
     this.updateFocus();
     this.core.update(dt, t);
+    this.core.updateReality(this.cameraRig.camera, t); // populated Reality: cull + animate
 
     this.lens.updateSway(this.controller.lastLook, t, dt);
     this.updateLensScreen();

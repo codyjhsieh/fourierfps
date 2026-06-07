@@ -219,3 +219,150 @@ export function makeRug(w = 2.4, d = 1.6, color: number = Palette.dustyRose): TH
   mesh.position.y = 0.02;
   return mesh;
 }
+
+/** Double bed: low frame, mattress, duvet block and two pillows. Headboard at -z. */
+export function makeBed(): THREE.Group {
+  const g = new THREE.Group();
+  const w = 1.6;
+  const d = 2.1;
+  // frame / base
+  const frame = box(w, 0.3, d, Palette.sandstone, true);
+  frame.position.y = 0.15;
+  g.add(frame);
+  // mattress
+  const mattress = box(w - 0.08, 0.22, d - 0.08, Palette.warmCream);
+  mattress.position.y = 0.41;
+  g.add(mattress);
+  // duvet covering the lower two-thirds
+  const duvet = box(w - 0.04, 0.14, d * 0.62, Palette.powderBlue, true);
+  duvet.position.set(0, 0.55, d * 0.16);
+  g.add(duvet);
+  // headboard at -z
+  const headboard = box(w, 0.7, 0.12, Palette.sandstone, true);
+  headboard.position.set(0, 0.5, -d / 2 + 0.06);
+  g.add(headboard);
+  // pillows near headboard
+  for (const x of [-0.38, 0.38]) {
+    const pillow = box(0.62, 0.14, 0.4, Palette.dustyRose);
+    pillow.position.set(x, 0.56, -d / 2 + 0.36);
+    g.add(pillow);
+  }
+  // legs
+  for (const sx of [-1, 1])
+    for (const sz of [-1, 1]) {
+      const leg = box(0.08, 0.16, 0.08, Palette.ink);
+      leg.position.set(sx * (w / 2 - 0.08), 0.08, sz * (d / 2 - 0.08));
+      g.add(leg);
+    }
+  return g;
+}
+
+/** Small bedside nightstand with a drawer and a tiny knob. */
+export function makeNightstand(): THREE.Group {
+  const g = new THREE.Group();
+  const w = 0.5;
+  const h = 0.55;
+  const d = 0.45;
+  const body = box(w, h, d, Palette.sandstone, true);
+  body.position.y = h / 2;
+  g.add(body);
+  // drawer face
+  const drawer = box(w - 0.08, 0.18, 0.02, 0xcdb892);
+  drawer.position.set(0, h - 0.16, d / 2 + 0.005);
+  g.add(drawer);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), pastel(Palette.ink));
+  knob.position.set(0, h - 0.16, d / 2 + 0.03);
+  g.add(knob);
+  // legs
+  for (const sx of [-1, 1])
+    for (const sz of [-1, 1]) {
+      const leg = box(0.05, 0.16, 0.05, Palette.ink);
+      leg.position.set(sx * (w / 2 - 0.05), 0.08, sz * (d / 2 - 0.05));
+      g.add(leg);
+    }
+  return g;
+}
+
+/** Kitchen counter run: cabinet base, countertop, splashback, sink basin and faucet. */
+export function makeKitchenCounter(w = 2.0): THREE.Group {
+  const g = new THREE.Group();
+  const h = 0.9;
+  const d = 0.6;
+  // cabinet base
+  const base = box(w, h - 0.06, d, Palette.warmCream, true);
+  base.position.y = (h - 0.06) / 2;
+  g.add(base);
+  // countertop
+  const top = box(w + 0.06, 0.08, d + 0.04, Palette.lavenderGray, true);
+  top.position.y = h;
+  g.add(top);
+  // splashback at -z
+  const splash = box(w + 0.06, 0.4, 0.04, Palette.powderBlue);
+  splash.position.set(0, h + 0.24, -d / 2 - 0.02);
+  g.add(splash);
+  // cabinet doors split across the run
+  const doorCount = Math.max(2, Math.round(w / 0.6));
+  const dw = (w - 0.1) / doorCount;
+  for (let i = 0; i < doorCount; i++) {
+    const x = -w / 2 + 0.05 + dw / 2 + i * dw;
+    const door = box(dw - 0.04, h - 0.2, 0.02, 0xe2d4ba);
+    door.position.set(x, (h - 0.06) / 2, d / 2 + 0.005);
+    g.add(door);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), pastel(Palette.ink));
+    knob.position.set(x + dw / 2 - 0.06, (h - 0.06) / 2 + 0.18, d / 2 + 0.03);
+    g.add(knob);
+  }
+  // sunken sink basin
+  const sink = box(0.5, 0.1, 0.4, Palette.shadow);
+  sink.position.set(w / 2 - 0.4, h - 0.02, 0.02);
+  g.add(sink);
+  // faucet
+  const spout = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.018, 0.018, 0.26, 8),
+    pastel(Palette.ink)
+  );
+  spout.position.set(w / 2 - 0.4, h + 0.13, -0.14);
+  g.add(spout);
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.018, 0.018, 0.14, 8),
+    pastel(Palette.ink)
+  );
+  neck.rotation.z = Math.PI / 2;
+  neck.position.set(w / 2 - 0.4, h + 0.25, -0.08);
+  g.add(neck);
+  return g;
+}
+
+/** Low TV unit / media console with a screen panel and two shelf compartments. */
+export function makeTvUnit(): THREE.Group {
+  const g = new THREE.Group();
+  const w = 1.6;
+  const h = 0.5;
+  const d = 0.4;
+  // body
+  const body = box(w, h, d, Palette.sandstone, true);
+  body.position.y = h / 2;
+  g.add(body);
+  // two open shelf compartments (darker insets)
+  for (const x of [-0.4, 0.4]) {
+    const inset = box(0.6, 0.28, 0.02, Palette.shadow);
+    inset.position.set(x, h / 2, d / 2 + 0.005);
+    g.add(inset);
+  }
+  // screen standing on top
+  const screen = box(1.1, 0.66, 0.06, Palette.ink, true);
+  screen.position.set(0, h + 0.4, -0.04);
+  g.add(screen);
+  // glowing display face
+  const display = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.0, 0.56),
+    new THREE.MeshBasicMaterial({ color: 0xbfe0f0 })
+  );
+  display.position.set(0, h + 0.4, -0.005);
+  g.add(display);
+  // stand foot
+  const foot = box(0.3, 0.06, 0.16, Palette.ink);
+  foot.position.set(0, h + 0.04, -0.04);
+  g.add(foot);
+  return g;
+}

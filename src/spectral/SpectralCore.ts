@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { Reconstruction } from "./Reconstruction";
 import { noise3 } from "../world/Geometry";
 import { CollisionField } from "./CollisionField";
+import { RealityScene, defaultRealityPalette } from "./RealityScene";
 import {
   computeSpectralWorld,
   bandCountForLevel,
@@ -80,6 +81,15 @@ function col(hex: number): THREE.Color {
   return new THREE.Color(hex);
 }
 
+/** Cheap UA/touch probe so RealityScene can pull its instance caps in on mobile. */
+function detectMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const touch = typeof navigator.maxTouchPoints === "number" && navigator.maxTouchPoints > 0;
+  const narrow = typeof window !== "undefined" && window.innerWidth <= 900;
+  return /Android|iPhone|iPad|iPod|Mobile|Silk/i.test(ua) || (touch && !/Mac/i.test(ua) && narrow);
+}
+
 function geomFromArrays(m: MeshArrays): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(m.positions, 3));
@@ -117,6 +127,8 @@ export class SpectralCore {
 
   private mesh: THREE.Mesh;
   private mat: THREE.ShaderMaterial;
+  private realityScene = new RealityScene();
+  private mobile = detectMobile();
   private candidateGroup = new THREE.Group();
   private candidates: Candidate[] = [];
   private focusedIndex = -1;
@@ -131,6 +143,7 @@ export class SpectralCore {
     this.mat = this.makeSurfaceMaterial();
     this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.mat);
     this.group.add(this.mesh);
+    this.group.add(this.realityScene.group);
     this.group.add(this.candidateGroup);
 
     try {
@@ -187,6 +200,10 @@ export class SpectralCore {
     this.clearCandidates();
     this.candidates.push(this.makeCandidate(res.anomaly, true));
     for (const d of res.decoys) this.candidates.push(this.makeCandidate(d, false));
+
+    // Materialize the populated Reality (InstancedMesh pools + creature rigs) from
+    // the same plan that drove the spectral field, so Reality and the bands agree.
+    this.realityScene.build(res.population, res.creatures, res.establishing, defaultRealityPalette, this.mobile);
 
     this.ready = true;
     this.state = "establishing"; // show the clean, recognizable place first
@@ -313,12 +330,19 @@ export class SpectralCore {
 
   private refreshMesh(): void {
     const u = this.mat.uniforms;
+    // Reality + the establishing shot show the populated InstancedMesh scene; the
+    // isosurface mesh is hidden. Every other state shows the Fourier isosurface and
+    // hides the population. The discrete state machine gates the swap (no crossfade).
+    const populated = this.state === "reality" || this.state === "establishing";
+    this.realityScene.group.visible = populated;
+    this.mesh.visible = !populated;
+
     if (this.state === "restored") {
       this.mesh.geometry = this.cleanGeom ?? this.mesh.geometry;
       this.applyLook(this.pal.restored);
       u.uChaos.value = 0;
     } else if (this.state === "establishing") {
-      // the clean, recognizable place — no corruption
+      // the clean, recognizable place — no corruption (population drives the visuals)
       this.mesh.geometry = this.cleanGeom ?? this.mesh.geometry;
       this.applyLook(this.pal.restored);
       u.uChaos.value = 0;
@@ -376,10 +400,21 @@ export class SpectralCore {
     }
   }
 
+  /**
+   * Per-frame Reality tick — frustum culling, distance LOD swaps, zero-scale fade
+   * and creature animation. Only runs while the populated scene is on screen
+   * (reality/establishing); skipped entirely in the spectral/isosurface states so
+   * the heavy populated draw load never coexists with the FFT-band frame.
+   */
+  updateReality(camera: THREE.PerspectiveCamera, time: number): void {
+    if (this.realityScene.group.visible) this.realityScene.update(camera, time);
+  }
+
   dispose(): void {
     for (const g of this.bandGeoms) g.dispose();
     this.cleanGeom?.dispose();
     this.clearCandidates();
+    this.realityScene.dispose();
     this.worker?.terminate();
   }
 

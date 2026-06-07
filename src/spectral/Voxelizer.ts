@@ -1,6 +1,8 @@
 import { WALL_HEIGHT } from "../world/ProceduralRoom";
 import type { LayoutSpec } from "../world/LayoutGen";
 import { mulberry32 } from "../puzzles/LevelGen";
+import { aabbFor } from "../world/ObjectLibrary";
+import type { ScenePlan } from "../world/ScenePlan";
 
 /**
  * Turns a procedural house layout into a 3D density field (1 = solid structure,
@@ -122,6 +124,85 @@ export function chooseDecoys(spec: LayoutSpec, level: number, seed: number, coun
     out.push({ center: [cx, cy, cz], radius });
   }
   return out;
+}
+
+/**
+ * Plan → density field.
+ *
+ * Starts from a copy of the plan's structural shell (`structuralField.data`),
+ * then rasterizes every SOLID {@link PlacedObject} as a yaw-rotated box into the
+ * same N³ grid. The result is the signal the spectral pipeline FFTs, so the
+ * band-limited reconstructions now resolve recognizable furniture / tree /
+ * console silhouettes instead of a bare shell. The anomaly is injected AFTER
+ * this (see {@link withAnomaly}), so it lives only in the frequency domain among
+ * the real silhouettes.
+ *
+ * Grid geometry (n, voxel, origin) is taken unchanged from `structuralField`, so
+ * the produced field stays exactly registered with Reality and with collision.
+ */
+export function voxelizeScenePlan(plan: ScenePlan, n = 64): Float32Array {
+  const field = plan.structuralField;
+  const data = field.data.slice();
+  const [vx, vy, vz] = field.voxel;
+  const [ox, oy, oz] = field.origin;
+
+  for (const obj of plan.objects) {
+    if (!obj.solid) continue;
+
+    // AABB.half is already half-extents; scale by the instance scale.
+    const ext = aabbFor(obj.type);
+    const hx = ext.half[0] * obj.scale;
+    const hy = ext.half[1] * obj.scale;
+    const hz = ext.half[2] * obj.scale;
+    if (hx <= 0 || hy <= 0 || hz <= 0) continue;
+
+    const [px, py, pz] = obj.pos;
+
+    // World bounding sphere of the rotated box: radius = |halfExtents|.
+    const r = Math.sqrt(hx * hx + hy * hy + hz * hz);
+
+    // Voxel index range overlapping that sphere (centre-sampled grid).
+    let x0 = Math.floor((px - r - ox) / vx - 0.5);
+    let x1 = Math.ceil((px + r - ox) / vx - 0.5);
+    let y0 = Math.floor((py - r - oy) / vy - 0.5);
+    let y1 = Math.ceil((py + r - oy) / vy - 0.5);
+    let z0 = Math.floor((pz - r - oz) / vz - 0.5);
+    let z1 = Math.ceil((pz + r - oz) / vz - 0.5);
+    x0 = Math.max(0, x0);
+    y0 = Math.max(0, y0);
+    z0 = Math.max(0, z0);
+    x1 = Math.min(n - 1, x1);
+    y1 = Math.min(n - 1, y1);
+    z1 = Math.min(n - 1, z1);
+    if (x0 > x1 || y0 > y1 || z0 > z1) continue;
+
+    // Inverse yaw (rotate voxel offset back into object-local space).
+    const cos = Math.cos(-obj.rot);
+    const sin = Math.sin(-obj.rot);
+
+    for (let zi = z0; zi <= z1; zi++) {
+      const wz = oz + (zi + 0.5) * vz;
+      const dz = wz - pz;
+      for (let yi = y0; yi <= y1; yi++) {
+        const wy = oy + (yi + 0.5) * vy;
+        const dy = wy - py;
+        const ay = Math.abs(dy);
+        if (ay > hy) continue; // y is rotation-invariant (yaw only)
+        for (let xi = x0; xi <= x1; xi++) {
+          const wx = ox + (xi + 0.5) * vx;
+          const dx = wx - px;
+          // Inverse-rotate the XZ offset about pos.
+          const lx = dx * cos - dz * sin;
+          const lz = dx * sin + dz * cos;
+          if (Math.abs(lx) <= hx && Math.abs(lz) <= hz) {
+            data[idx(xi, yi, zi, n)] = 1;
+          }
+        }
+      }
+    }
+  }
+
+  return data;
 }
 
 /** Returns a copy of the field with the anomaly object added (the "noise"). */

@@ -1,7 +1,8 @@
 import { fft3d, idx3, radialFrequency } from "./Fourier3D";
 import { surfaceNets } from "./SurfaceNets";
-import { withAnomaly } from "./Voxelizer";
+import { withAnomaly, voxelizeScenePlan } from "./Voxelizer";
 import { archetypeForLevel } from "../world/Archetypes";
+import type { PlacedObject, CreatureSpec, EstablishingShot } from "../world/ScenePlan";
 import { mulberry32 } from "../puzzles/LevelGen";
 
 export interface Marker {
@@ -47,6 +48,12 @@ export interface SpectralResult {
   name: string;
   /** source density field (the true structure) — used for collision/physics */
   solid: Float32Array;
+  /** Reality population: instanceable objects placed by the scene plan. */
+  population: PlacedObject[];
+  /** Reality creatures: individually animated, not voxelized nor collided. */
+  creatures: CreatureSpec[];
+  /** Optional cinematic establishing framing from the plan. */
+  establishing?: EstablishingShot;
 }
 
 function toComplex(real: Float32Array): Float32Array {
@@ -79,7 +86,8 @@ function maxOf(a: Float32Array): number {
 }
 
 export function computeSpectralWorld(level: number, seed: number, n = 64, K = 8): SpectralResult {
-  const src = archetypeForLevel(level).build(level, seed, n);
+  const plan = archetypeForLevel(level).build(level, seed, n);
+  const src = plan.structuralField;
   const rng = mulberry32((seed >>> 0) ^ Math.imul(level + 7, 0xc2b2ae35));
   const anchors = src.anchors.length ? src.anchors : ([[0, 1.2, 0]] as [number, number, number][]);
 
@@ -95,7 +103,10 @@ export function computeSpectralWorld(level: number, seed: number, n = 64, K = 8)
     .slice(0, decoyCountForLevel(level))
     .map((i) => ({ center: anchors[i], radius: Math.max(0.3, 0.5 - level * 0.02) }));
 
-  const field = { n, data: src.data, voxel: src.voxel, origin: src.origin };
+  // Merge every solid placed object into the structural shell, so the bands now
+  // resolve recognizable silhouettes (furniture/trees/consoles), not a bare shell.
+  const data = voxelizeScenePlan(plan, n);
+  const field = { n, data, voxel: src.voxel, origin: src.origin };
   const noisy = withAnomaly(field, anomaly);
 
   const spectrum = toComplex(noisy);
@@ -129,7 +140,10 @@ export function computeSpectralWorld(level: number, seed: number, n = 64, K = 8)
     spawn: src.spawn,
     look: src.look,
     name: src.name,
-    solid: src.data
+    solid: data,
+    population: plan.objects,
+    creatures: plan.creatures,
+    establishing: plan.establishing
   };
 }
 
