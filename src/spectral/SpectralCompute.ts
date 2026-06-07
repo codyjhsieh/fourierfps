@@ -86,6 +86,8 @@ export interface SpectralResult {
   name: string;
   /** source density field (the true structure) — used for collision/physics */
   solid: Float32Array;
+  /** structural shell isosurface (walls/floor/terrain only) — shown in Reality */
+  structure: MeshArrays;
   /** Reality population: instanceable objects placed by the scene plan. */
   population: PlacedObject[];
   /** Reality creatures: individually animated, not voxelized nor collided. */
@@ -163,6 +165,10 @@ export function computeSpectralWorld(level: number, seed: number, n = 64, K = 8)
   const cleanRecon = inverseLowPass(cleanSpectrum, n, 3);
   const clean = withNormals(surfaceNets(cleanRecon, n, Math.max(0.04, 0.45 * maxOf(cleanRecon)), 1, [0, 0, 0]));
 
+  // crisp structural shell (walls/floor/terrain) straight from the structural
+  // 0/1 field — shown solid behind the populated objects in Reality.
+  const structure = withNormals(surfaceNets(src.data, n, 0.5, 1, [0, 0, 0]));
+
   const frac = 1 - Math.min(1, anomaly.radius / 0.8);
   const anomalyBand = Math.min(K - 1, Math.max(1, Math.round(frac * (K - 1))));
 
@@ -179,6 +185,7 @@ export function computeSpectralWorld(level: number, seed: number, n = 64, K = 8)
     look: src.look,
     name: src.name,
     solid: data,
+    structure,
     population: plan.objects,
     creatures: plan.creatures,
     establishing: plan.establishing
@@ -192,6 +199,7 @@ export function resultTransferables(r: SpectralResult): ArrayBuffer[] {
     t.push(b.positions.buffer as ArrayBuffer, b.indices.buffer as ArrayBuffer, b.normals.buffer as ArrayBuffer);
   }
   t.push(r.clean.positions.buffer as ArrayBuffer, r.clean.indices.buffer as ArrayBuffer, r.clean.normals.buffer as ArrayBuffer);
+  t.push(r.structure.positions.buffer as ArrayBuffer, r.structure.indices.buffer as ArrayBuffer, r.structure.normals.buffer as ArrayBuffer);
   t.push(r.solid.buffer as ArrayBuffer);
   return t;
 }

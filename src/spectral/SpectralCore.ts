@@ -117,6 +117,7 @@ export class SpectralCore {
 
   private bandGeoms: THREE.BufferGeometry[] = [];
   private cleanGeom?: THREE.BufferGeometry;
+  private structureGeom?: THREE.BufferGeometry;
   private bandCountVal = 0;
   private anomalyBandVal = 1;
   private archName = "";
@@ -184,6 +185,8 @@ export class SpectralCore {
     this.cleanGeom?.dispose();
     this.bandGeoms = res.bands.map(geomFromArrays);
     this.cleanGeom = geomFromArrays(res.clean);
+    this.structureGeom?.dispose();
+    this.structureGeom = geomFromArrays(res.structure);
     this.bandCountVal = this.bandGeoms.length;
     this.anomalyBandVal = res.anomalyBand;
     this.lastSpawn = res.spawn;
@@ -335,21 +338,23 @@ export class SpectralCore {
     // hides the population. The discrete state machine gates the swap (no crossfade).
     const populated = this.state === "reality" || this.state === "establishing";
     this.realityScene.group.visible = populated;
-    this.mesh.visible = !populated;
+    this.mesh.visible = true; // structural shell is always drawn (walls/floor/terrain)
 
     if (this.state === "restored") {
       this.mesh.geometry = this.cleanGeom ?? this.mesh.geometry;
       this.applyLook(this.pal.restored);
       u.uChaos.value = 0;
     } else if (this.state === "establishing") {
-      // the clean, recognizable place — no corruption (population drives the visuals)
-      this.mesh.geometry = this.cleanGeom ?? this.mesh.geometry;
+      // the populated place: crisp structural shell behind the instanced objects
+      this.mesh.geometry = this.structureGeom ?? this.mesh.geometry;
       this.applyLook(this.pal.restored);
       u.uChaos.value = 0;
     } else if (this.state === "reality" || this.state === "loading") {
-      this.mesh.geometry = this.bandGeoms[this.bandCountVal - 1] ?? this.mesh.geometry;
+      // populated Reality: walls/floor shell behind the objects; "corruption"
+      // reads through the post-fx grade, not heaving geometry
+      this.mesh.geometry = this.structureGeom ?? this.mesh.geometry;
       this.applyLook(this.pal.reality);
-      u.uChaos.value = 1;
+      u.uChaos.value = 0;
     } else {
       this.mesh.geometry = this.bandGeoms[this.band] ?? this.mesh.geometry;
       this.applyLook(this.pal.spectral);
@@ -413,6 +418,7 @@ export class SpectralCore {
   dispose(): void {
     for (const g of this.bandGeoms) g.dispose();
     this.cleanGeom?.dispose();
+    this.structureGeom?.dispose();
     this.clearCandidates();
     this.realityScene.dispose();
     this.worker?.terminate();
