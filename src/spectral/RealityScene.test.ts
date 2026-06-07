@@ -52,7 +52,8 @@ function build(s: RealityScene, p: ScenePlan, mobile = false): void {
 /** Count InstancedMeshes in the scene group (a proxy for draw calls). */
 function instancedMeshes(scene: RealityScene): THREE.InstancedMesh[] {
   return scene.group.children.filter(
-    (c): c is THREE.InstancedMesh => (c as THREE.InstancedMesh).isInstancedMesh
+    (c): c is THREE.InstancedMesh =>
+      (c as THREE.InstancedMesh).isInstancedMesh && c.name !== "contactShadows"
   );
 }
 

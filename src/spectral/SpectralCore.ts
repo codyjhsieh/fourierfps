@@ -497,6 +497,12 @@ export class SpectralCore {
           vec3 base = mix(uColorA, uColorB, vWY);
           float fres = pow(1.0 - max(0.0, dot(N, V)), 3.0);
           vec3 c = base*(0.55+0.5*diff) + amb*0.45 + uRim*fres*0.6 + vec3(spec);
+          // fake cavity AO + a baseboard trim line, keyed off world height
+          float floorAO = mix(0.62, 1.0, smoothstep(0.0, 0.16, vWY));
+          float ceilAO = mix(0.82, 1.0, 1.0 - smoothstep(0.82, 1.0, vWY));
+          c *= floorAO * ceilAO;
+          float baseboard = smoothstep(0.03, 0.05, vWY) * (1.0 - smoothstep(0.10, 0.13, vWY));
+          c = mix(c, c * 0.55, baseboard * 0.6);
           gl_FragColor = vec4(c, 0.95);
         }`
     });

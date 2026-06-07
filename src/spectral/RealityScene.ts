@@ -128,6 +128,7 @@ function asCreatureKind(kind: string): CreatureKind {
 
 export class RealityScene {
   readonly group = new THREE.Group();
+  private shadowMesh?: THREE.InstancedMesh;
 
   /** near-geo pools keyed by `type|variant` */
   private nearPools = new Map<string, Pool>();
@@ -246,6 +247,7 @@ export class RealityScene {
         if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 
     // Creatures: capped, individually animated Groups.
+    this.buildContactShadows(objects);
     this.buildCreatures(this.capCreatures(creatures, mobile), palette);
 
     // Give every pool a world-covering boundingSphere so three's whole-mesh
@@ -361,6 +363,40 @@ export class RealityScene {
   }
 
   // ---------------- creatures ----------------
+
+  /** A flat dark disc on the floor under each solid object — a cheap contact
+   *  shadow that grounds furniture/props. One InstancedMesh, one draw call. */
+  private buildContactShadows(objects: PlacedObject[]): void {
+    const solid = objects.filter((o) => o.solid);
+    if (!solid.length) return;
+    const geo = new THREE.CircleGeometry(1, 14);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x0a0a12,
+      transparent: true,
+      opacity: 0.24,
+      depthWrite: false
+    });
+    const mesh = new THREE.InstancedMesh(geo, mat, solid.length);
+    mesh.name = "contactShadows";
+    mesh.frustumCulled = true;
+    mesh.renderOrder = -1; // draw under the props
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    const s = new THREE.Vector3();
+    const p = new THREE.Vector3();
+    let i = 0;
+    for (const o of solid) {
+      const ext = aabbFor(o.type);
+      const r = Math.max(ext.half[0], ext.half[2]) * o.scale * 1.4;
+      p.set(o.pos[0], o.pos[1] + 0.02, o.pos[2]);
+      s.set(r, r, r);
+      m.compose(p, q, s);
+      mesh.setMatrixAt(i++, m);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    this.shadowMesh = mesh;
+    this.group.add(mesh);
+  }
 
   private buildCreatures(specs: CreatureSpec[], palette: RealityPalette): void {
     const keys = [
@@ -492,6 +528,12 @@ export class RealityScene {
   }
 
   private disposeContents(): void {
+    if (this.shadowMesh) {
+      this.group.remove(this.shadowMesh);
+      this.shadowMesh.geometry.dispose();
+      (this.shadowMesh.material as THREE.Material).dispose();
+      this.shadowMesh = undefined;
+    }
     for (const pool of this.nearPools.values()) {
       for (const mesh of pool.meshes) {
         this.group.remove(mesh);
